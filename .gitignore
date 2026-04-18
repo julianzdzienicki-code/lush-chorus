@@ -1,0 +1,29 @@
+# Build artifacts
+Builds/MacOSX/build/
+Builds/MacOSX/**/DerivedData/
+Builds/MacOSX/**/xcuserdata/
+Builds/MacOSX/**/*.xcworkspace/xcuserdata/
+**/xcuserdata/
+**/DerivedData/
+
+# JUCE generated (keep JuceLibraryCode so the project builds out of the box)
+# If you regenerate via Projucer, these will be refreshed.
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Misc
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib

@@ -312,7 +312,7 @@ LushChorusAudioProcessorEditor::LushChorusAudioProcessorEditor (LushChorusAudioP
 {
     setLookAndFeel (&knobLnf);
 
-    for (auto* k : { &rateKnob, &depthKnob, &lagKnob, &mixKnob, &outputKnob })
+    for (auto* k : { &rateKnob, &depthKnob, &lagKnob, &mixKnob, &dryWetKnob, &outputKnob })
     {
         k->slider.setLookAndFeel (&knobLnf);
         addAndMakeVisible (*k);
@@ -325,10 +325,11 @@ LushChorusAudioProcessorEditor::LushChorusAudioProcessorEditor (LushChorusAudioP
     outputKnob.slider.setTextValueSuffix (" dB");
 
     // Rate uses a log-ish skew via the parameter range; make the slider reflect it.
-    rateKnob.slider.setNumDecimalPlacesToDisplay (2);
-    depthKnob.slider.setNumDecimalPlacesToDisplay (2);
-    lagKnob.slider.setNumDecimalPlacesToDisplay   (2);
-    mixKnob.slider.setNumDecimalPlacesToDisplay   (2);
+    rateKnob.slider.setNumDecimalPlacesToDisplay   (2);
+    depthKnob.slider.setNumDecimalPlacesToDisplay  (2);
+    lagKnob.slider.setNumDecimalPlacesToDisplay    (2);
+    mixKnob.slider.setNumDecimalPlacesToDisplay    (2);
+    dryWetKnob.slider.setNumDecimalPlacesToDisplay (2);
     outputKnob.slider.setNumDecimalPlacesToDisplay (2);
 
     addAndMakeVisible (waveSwitch);
@@ -340,6 +341,7 @@ LushChorusAudioProcessorEditor::LushChorusAudioProcessorEditor (LushChorusAudioP
     depthAtt  = std::make_unique<SliderAttachment> (vts, LushChorusAudioProcessor::kDepthID,  depthKnob.slider);
     lagAtt    = std::make_unique<SliderAttachment> (vts, LushChorusAudioProcessor::kLagID,    lagKnob.slider);
     mixAtt    = std::make_unique<SliderAttachment> (vts, LushChorusAudioProcessor::kMixID,    mixKnob.slider);
+    dryWetAtt = std::make_unique<SliderAttachment> (vts, LushChorusAudioProcessor::kDryWetID, dryWetKnob.slider);
     outputAtt = std::make_unique<SliderAttachment> (vts, LushChorusAudioProcessor::kOutputID, outputKnob.slider);
 
     // Waveform toggle: drive the ChoiceParameter manually so the two buttons
@@ -350,7 +352,7 @@ LushChorusAudioProcessorEditor::LushChorusAudioProcessorEditor (LushChorusAudioP
 
     startTimerHz (10); // keeps the waveform toggle in sync with host-side changes
 
-    setSize (640, 380);
+    setSize (760, 380);
 }
 
 void LushChorusAudioProcessorEditor::timerCallback()
@@ -360,7 +362,7 @@ void LushChorusAudioProcessorEditor::timerCallback()
 
 LushChorusAudioProcessorEditor::~LushChorusAudioProcessorEditor()
 {
-    for (auto* k : { &rateKnob, &depthKnob, &lagKnob, &mixKnob, &outputKnob })
+    for (auto* k : { &rateKnob, &depthKnob, &lagKnob, &mixKnob, &dryWetKnob, &outputKnob })
         k->slider.setLookAndFeel (nullptr);
 
     setLookAndFeel (nullptr);
@@ -453,8 +455,8 @@ void LushChorusAudioProcessorEditor::resized()
 
     b.removeFromRight (16);  // gap
 
-    // Five knobs in a row
-    const int numKnobs = 5;
+    // Six knobs in a row
+    const int numKnobs = 6;
     const int knobW = b.getWidth() / numKnobs;
 
     auto place = [&] (LabelledKnob& k)
@@ -466,5 +468,6 @@ void LushChorusAudioProcessorEditor::resized()
     place (depthKnob);
     place (lagKnob);
     place (mixKnob);
+    place (dryWetKnob);
     place (outputKnob);
 }

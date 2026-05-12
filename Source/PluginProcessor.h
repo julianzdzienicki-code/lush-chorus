@@ -65,7 +65,8 @@ public:
     static constexpr const char* kDepthID     = "depth";
     static constexpr const char* kLagID       = "lag";
     static constexpr const char* kWaveformID  = "waveform";
-    static constexpr const char* kMixID       = "mix";
+    static constexpr const char* kMixID       = "mix";      // D-C-V blend
+    static constexpr const char* kDryWetID    = "drywet";   // classic wet/dry
     static constexpr const char* kOutputID    = "output";
 
     // Meter state exposed to the UI (peak in linear, clip latch flag)
@@ -80,6 +81,8 @@ private:
     //==============================================================================
     LushDSP::ChorusEngine engine;
     juce::SmoothedValue<float> outputGainSmooth;
+    juce::SmoothedValue<float> dryWetSmooth;
+    juce::AudioBuffer<float>   dryBuffer;   // cached dry copy for wet/dry mix
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LushChorusAudioProcessor)
 };

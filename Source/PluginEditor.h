@@ -122,6 +122,7 @@ private:
     LabelledKnob depthKnob  { "DEPTH"  };
     LabelledKnob lagKnob    { "LAG"    };
     LabelledKnob mixKnob    { "D   C   V" };
+    LabelledKnob dryWetKnob { "MIX"    };
     LabelledKnob outputKnob { "OUTPUT" };
 
     WaveformSwitch waveSwitch;
@@ -130,7 +131,7 @@ private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
-    std::unique_ptr<SliderAttachment> rateAtt, depthAtt, lagAtt, mixAtt, outputAtt;
+    std::unique_ptr<SliderAttachment> rateAtt, depthAtt, lagAtt, mixAtt, dryWetAtt, outputAtt;
 
     // For the two-state waveform choice we listen to button clicks directly
     // and write into the APVTS ChoiceParameter.

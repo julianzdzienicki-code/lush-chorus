@@ -56,12 +56,20 @@ LushChorusAudioProcessor::createParameterLayout()
         juce::StringArray { "Sine", "Triangle" },
         0));
 
-    // Mix: 0 = Dry, 0.5 = Chorus, 1 = Vibrato
+    // Mix (D-C-V): 0 = Dry-only wet path, 0.5 = Chorus, 1 = Vibrato
     params.push_back (std::make_unique<APF> (
         juce::ParameterID { kMixID, 1 },
         "Mix",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f),
         0.5f));
+
+    // Dry/Wet: classic wet/dry blend applied after the chorus engine.
+    // 0 = fully dry, 1 = fully wet. Shown on the UI as the "MIX" knob.
+    params.push_back (std::make_unique<APF> (
+        juce::ParameterID { kDryWetID, 1 },
+        "Dry/Wet",
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f),
+        1.0f));
 
     // Output gain: -12 to +12 dB
     params.push_back (std::make_unique<APF> (
@@ -116,6 +124,15 @@ void LushChorusAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     outputGainSmooth.reset (sampleRate, 0.02);
     outputGainSmooth.setCurrentAndTargetValue (1.0f);
 
+    dryWetSmooth.reset (sampleRate, 0.02);
+    dryWetSmooth.setCurrentAndTargetValue (
+        apvts.getRawParameterValue (kDryWetID)->load());
+
+    // Pre-allocate a dry-cache buffer that matches host layout.
+    dryBuffer.setSize (juce::jmax (2, getTotalNumInputChannels()),
+                       samplesPerBlock, false, false, true);
+    dryBuffer.clear();
+
     meterPeakL.store (0.0f);
     meterPeakR.store (0.0f);
     clipLatched.store (false);
@@ -156,28 +173,47 @@ void LushChorusAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const float lagMs    = apvts.getRawParameterValue (kLagID)    ->load();
     const int   waveform = (int) apvts.getRawParameterValue (kWaveformID)->load();
     const float mix      = apvts.getRawParameterValue (kMixID)    ->load();
+    const float drywet   = apvts.getRawParameterValue (kDryWetID) ->load();
     const float outDb    = apvts.getRawParameterValue (kOutputID) ->load();
 
     engine.setParameters (rateHz, depthMs, lagMs, waveform, mix);
     outputGainSmooth.setTargetValue (juce::Decibels::decibelsToGain (outDb));
+    dryWetSmooth.setTargetValue (drywet);
 
-    // ----- Run the chorus DSP in place on the buffer -----
-    engine.process (buffer);
-
-    // ----- Apply output gain, update meter + clip latch -----
     const int numSamples = buffer.getNumSamples();
     const int numCh      = juce::jmin (2, buffer.getNumChannels());
 
+    // ----- Cache the dry signal before the engine overwrites the buffer -----
+    if (dryBuffer.getNumSamples() < numSamples
+     || dryBuffer.getNumChannels() < numCh)
+        dryBuffer.setSize (juce::jmax (numCh, dryBuffer.getNumChannels()),
+                           numSamples, false, false, true);
+
+    for (int ch = 0; ch < numCh; ++ch)
+        dryBuffer.copyFrom (ch, 0, buffer, ch, 0, numSamples);
+
+    // ----- Run the chorus DSP in place on the buffer (now the wet signal) -----
+    engine.process (buffer);
+
+    // ----- Blend dry/wet, apply output gain, update meter + clip latch -----
     float peaks[2] = { 0.0f, 0.0f };
 
     for (int n = 0; n < numSamples; ++n)
     {
+        const float w = dryWetSmooth.getNextValue();
+        const float d = 1.0f - w;
         const float g = outputGainSmooth.getNextValue();
+
         for (int ch = 0; ch < numCh; ++ch)
         {
-            auto* data = buffer.getWritePointer (ch);
-            data[n] *= g;
-            peaks[ch] = juce::jmax (peaks[ch], std::abs (data[n]));
+            auto* wet = buffer.getWritePointer (ch);
+            const auto* dry = dryBuffer.getReadPointer (ch);
+
+            const float blended = dry[n] * d + wet[n] * w;
+            const float out     = blended * g;
+
+            wet[n] = out;
+            peaks[ch] = juce::jmax (peaks[ch], std::abs (out));
         }
     }
 
